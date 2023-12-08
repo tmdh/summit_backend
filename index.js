@@ -70,7 +70,7 @@ async function textSummary(text) {
 const app = express();
 app.use(express.json());
 
-app.get('/text', async (req, res) => {
+app.post('/text', async (req, res) => {
   const {text} = req.body;
   console.log(text);
   const summary = await textSummary(text, res);
