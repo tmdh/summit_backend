@@ -72,8 +72,13 @@ app.use(express.json());
 
 app.get('/text', async (req, res) => {
   const {text} = req.body;
+  console.log(text);
   const summary = await textSummary(text, res);
   res.json({summary});
+})
+
+app.get("/", (req, res) => {
+  res.json({'hello': 'world'});
 })
 
 app.listen(port, () => {
