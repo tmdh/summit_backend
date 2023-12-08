@@ -3,6 +3,8 @@ const express = require("express");
 
 const endpoint = process.env["ENDPOINT"] || "https://summit-lang-ai.cognitiveservices.azure.com/";
 const apiKey = process.env["LANGUAGE_API_KEY"] || "dc869dad17b04e2bb8b9d61f4d17ebb3";
+const port = process.env.PORT || 3000;
+
 
 const documents = [
 `More than a year and a half after Covid-19 swept across the globe, we’re all still grappling with the enormity of the changes we have experienced and the lessons we have learned in our personal and professional lives. At this juncture of the pandemic, however, I think it’s safe to say that at least two things are clear. The first is that the millions of nonprofits around the world have made a huge difference in people’s lives by stepping forward under the most difficult circumstances to provide care and relief when and where it was needed most. The second is that the dramatic acceleration in the adoption of cloud-based tools and technologies has transformed how organizations of every kind operate – including nonprofits.
@@ -74,6 +76,6 @@ app.get('/text', async (req, res) => {
   res.json({summary});
 })
 
-app.listen(3000, () => {
+app.listen(port, () => {
   console.log("server started")
 })
