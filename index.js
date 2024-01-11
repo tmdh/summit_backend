@@ -1,7 +1,7 @@
 const { AzureKeyCredential, TextAnalysisClient } = require("@azure/ai-language-text");
 const express = require("express");
 const multer = require("multer");
-const pdf2md = require('@opendocsg/pdf2md');
+const pdf = require("pdf-extraction");
 const mammoth = require("mammoth");
 
 const fs = require('fs')
@@ -15,7 +15,7 @@ async function textSummary(text) {
   const actions = [
     {
       kind: "ExtractiveSummarization",
-      maxSentenceCount: 2,
+      maxSentenceCount: 5,
     },
   ];
   const poller = await client.beginAnalyzeBatch(actions, [text], "en");
@@ -27,7 +27,7 @@ async function textSummary(text) {
   });
 
   const results = await poller.pollUntilDone();
-
+  let finalResult = "";
   for await (const actionResult of results) {
     if (actionResult.kind !== "ExtractiveSummarization") {
       throw new Error(`Expected extractive summarization results but got: ${actionResult.kind}`);
@@ -41,9 +41,10 @@ async function textSummary(text) {
         const { code, message } = result.error;
         throw new Error(`Unexpected error (${code}): ${message}`);
       }
-      return result.sentences.map((sentence) => sentence.text).join("\n");
+      finalResult += result.sentences.map((sentence) => sentence.text).join("\n");
     }
   }
+  return finalResult;
 }
 
 
@@ -69,21 +70,31 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 app.post('/upload', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-  const filename = req.file.filename;
-  if (filename.endsWith("pdf")) {
-    const pdfBuffer = fs.readFileSync('uploads/' + filename);
-    const text = await pdf2md(pdfBuffer);
-    const summary = await textSummary(text, res);
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    const filename = req.file.filename;
+    let extractedText = "";
+
+    if (filename.endsWith("pdf")) {
+      const pdfBuffer = fs.readFileSync('uploads/' + filename);
+      let {text} = await pdf(pdfBuffer);
+      extractedText = text;
+    } else if (filename.endsWith("docx")) {
+      let {value} = await mammoth.extractRawText({path: 'uploads/' + filename});
+      extractedText = value;
+    } else {
+      extractedText = "File not supported";
+    }
+    if (extractedText.length > 100000) {
+      extractedText = extractedText.substring(0, 100000);
+    }
+    const summary = await textSummary(extractedText, res);
     res.json({summary});
-  } else if (filename.endsWith("docx")) {
-    const {value} = await mammoth.extractRawText({path: 'uploads/' + filename});
-    const summary = await textSummary(value, res);
-    res.json({summary});
-  } else {
-    res.json({ summary: 'File not supported' });
+  } catch(e) {
+    console.error(e);
+    res.json({summary: "Error processing file\n- Make sure the document has text data inside it."});
   }
 });
 
