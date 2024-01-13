@@ -84,6 +84,9 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     } else if (filename.endsWith("docx")) {
       let {value} = await mammoth.extractRawText({path: 'uploads/' + filename});
       extractedText = value;
+    } else if (filename.endsWith("txt")) {
+      const textBuffer = fs.readFileSync('uploads/' + filename);
+      extractedText = textBuffer.toString();
     } else {
       extractedText = "File not supported";
     }
