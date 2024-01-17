@@ -3,13 +3,18 @@ const express = require("express");
 const multer = require("multer");
 const pdf = require("pdf-extraction");
 const mammoth = require("mammoth");
+const {HfInference} = require("@huggingface/inference");
 
 const fs = require('fs')
 
 const endpoint = process.env["ENDPOINT"];
 const apiKey = process.env["LANGUAGE_API_KEY"];
+const hfKey = process.env["HF_KEY"];
 const port = process.env.PORT || 3000;
 
+const inference = new HfInference(hfKey);
+
+/*
 async function textSummary(text) {
   const client = new TextAnalysisClient(endpoint, new AzureKeyCredential(apiKey));
   const actions = [
@@ -46,7 +51,12 @@ async function textSummary(text) {
   }
   return finalResult;
 }
+*/
 
+async function textSummary(text) {
+  const {summary_text} = await inference.summarization({model: "sshleifer/distilbart-cnn-12-6", inputs: text});
+  return summary_text;
+}
 
 const app = express();
 app.use(express.json());
@@ -54,7 +64,7 @@ app.use(express.json());
 app.post('/text', async (req, res) => {
   const {text} = req.body;
   console.log(text);
-  const summary = await textSummary(text, res);
+  const summary = await textSummary(text);
   res.json({summary});
 })
 
@@ -93,7 +103,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     if (extractedText.length > 100000) {
       extractedText = extractedText.substring(0, 100000);
     }
-    const summary = await textSummary(extractedText, res);
+    const summary = await textSummary(extractedText);
     res.json({summary});
   } catch(e) {
     console.error(e);
